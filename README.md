@@ -62,6 +62,25 @@ pi list
 
 完整安装后，可以使用 `/skill:clarify-idea` 等命令调用 Skill。
 
+### 四端同步与发布
+
+一次只做本地验证，不修改远程仓库或本地客户端：
+
+```bash
+python3 scripts/sync_distributions.py
+```
+
+明确需要发布时，使用一个命令完成验证、提交、推送，以及 Claude Code、Codex、ZCode、Pi 四端更新：
+
+```bash
+python3 scripts/sync_distributions.py \
+  --publish \
+  --stage \
+  --message "feat: update agent build kit"
+```
+
+`--stage` 会暂存当前全部改动；不指定时，脚本只接受已经整理好的暂存区，并拒绝未暂存或未跟踪文件。脚本不会强制推送、拉取合并或直接编辑客户端缓存。ZCode 更新通过其内置 app-server 完成；Codex 更新后，如果已经打开的会话仍引用旧缓存路径，请重启 Codex 或新开会话。
+
 ### 单独安装 Skill
 
 以下命令只校验并准备平台专用副本，不写入目标目录：
@@ -107,6 +126,7 @@ agent-build-kit/
 ├── .codex-plugin/
 ├── .zcode-plugin/
 ├── scripts/install_skill.py
+├── scripts/sync_distributions.py
 ├── skills/
 ├── tests/
 ├── AGENTS.md
@@ -123,6 +143,8 @@ python3 skills/build-plugin/scripts/sync_shared_files.py --root . --write
 ```
 
 ## 验证
+
+四端同步脚本会合并执行以下发布前门禁：共享文件镜像、全平台 Plugin、Skill 评测资产、完整回归测试和 Git 空白检查。
 
 验证完整的四平台分发包：
 
@@ -162,7 +184,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 - 项目开发说明以 [`AGENTS.md`](AGENTS.md) 为准。
 - `CLAUDE.md` 是只包含 `@AGENTS.md` 的普通文件。
 - 工作流文件使用 `§NN-name.md`；模板文件使用 `<name>.template.<ext>`。
-- 不自动提交、推送、发布或更新本地 Plugin；每项外部操作都需要单独授权。
+- 普通验证不会提交、推送、发布或更新本地 Plugin；只有明确使用 `sync_distributions.py --publish` 时，才会按脚本顺序执行这些动作。
 
 ## 许可证
 

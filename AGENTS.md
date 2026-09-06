@@ -12,6 +12,7 @@
 - `skills/build-skill/scripts/validate_skill.py`：检查单个 Skill 的结构和多平台配置。
 - `skills/build-plugin/scripts/validate_plugin.py`：检查 Plugin Manifest、组件、共享文件镜像、符号链接安全和版本号。
 - `scripts/install_skill.py`：将单个 Skill 安装到 Claude Code、Codex、ZCode 或 Pi。
+- `scripts/sync_distributions.py`：合并执行发布前门禁，并在显式发布模式下提交、推送和同步四个平台分发。
 - `.plugin-shared-files.json`、`skills/build-plugin/scripts/sync_shared_files.py`：记录跨 Skill 共享文件的规范源，并同步普通文件副本，避免客户端缓存遗漏嵌套软链接。
 - `.claude-plugin/`、`.codex-plugin/` 与 `.zcode-plugin/`：三个平台的 Plugin Manifest；`.claude-plugin/marketplace.json` 同时是 Claude Code 与 ZCode 的 Marketplace 配置，`.agents/plugins/marketplace.json` 是 Codex Marketplace 配置；`package.json` 声明 Pi Package 及其 Skills。
 - `evals/skills/`、`scripts/validate_skill_evals.py`：保存九个 Skill 的触发、排除和关键行为用例，并在 CI 中做确定性结构校验，不调用付费模型。
@@ -29,6 +30,8 @@
 - `python3 skills/build-plugin/scripts/sync_shared_files.py --root .`：只读检查跨 Skill 镜像是否与规范源一致；需要刷新时显式添加 `--write`。
 - `python3 scripts/validate_skill_evals.py .`：静态检查每个正式 Skill 是否具有触发、排除和关键行为用例。
 - `git diff --check`：检查空白和补丁格式问题。
+- `python3 scripts/sync_distributions.py`：一次运行完整本地发布前门禁，不修改远程仓库或客户端。
+- `python3 scripts/sync_distributions.py --publish --stage --message "..."`：显式提交、推送并同步四个平台分发。
 
 ## 关键约定
 
@@ -52,6 +55,7 @@
 | `AGENTS.md` / `CLAUDE.md`    | `validate_agents_md.py --strict`，并检查 Git 中的普通文件与导入内容                                                          |
 | README                       | `validate_readme.py`，并核对公开命令与当前仓库一致                                                                           |
 | 正式版本                     | 核对 `.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`.codex-plugin/plugin.json`、`.zcode-plugin/plugin.json` 和 `package.json` |
+| 四端同步脚本                 | 先运行本地门禁；发布模式再核对提交、推送和 Claude Code、Codex、ZCode、Pi 的安装版本与关键 Skill 文件                           |
 
 - 行为变化还要在适用的真实客户端中验证；当前环境无法完成时，明确标为“未验证”。
 - 交付前运行相关测试、完整回归、全平台分发包检查和 `git diff --check`，分别报告结果。
@@ -60,4 +64,4 @@
 
 - Skill 与 Plugin 的详细交付流程分别维护在 `skills/build-skill/workflows/§06-delivery.md` 和 `skills/build-plugin/workflows/§07-delivery.md`，本文件不复制具体发布命令。
 - 实现和验证结束后，主动询问用户是否执行当前任务需要的 commit、push、Claude Code Plugin 更新、Codex Plugin 更新、ZCode Plugin 更新和 Pi Package 更新；允许只授权部分操作。
-- 不得自动 commit、push 或更新本地 Plugin；每项操作都需要单独授权，一项授权不能推导出另一项。
+- 普通开发流程不得自动 commit、push 或更新本地 Plugin；用户明确执行 `scripts/sync_distributions.py --publish` 时，视为一次性授权该脚本按既定顺序完成这些动作。

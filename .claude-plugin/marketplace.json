@@ -11,7 +11,7 @@
       "name": "agent-build-kit",
       "source": "./",
       "description": "Clarify ideas and build, audit, and maintain Agent Skills, plugins, README, project instructions, and developer documentation.",
-      "version": "3.2.0",
+      "version": "3.3.0",
       "author": {
         "name": "koco-co",
         "url": "https://github.com/koco-co"
