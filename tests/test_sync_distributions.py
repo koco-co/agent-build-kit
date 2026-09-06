@@ -91,6 +91,18 @@ class SyncDistributionsTests(unittest.TestCase):
             },
         )
 
+    def test_find_entry_accepts_codex_installed_payload(self) -> None:
+        entry = sync_distributions._find_entry(
+            {
+                "installed": [
+                    {"pluginId": "agent-build-kit@agent-build-kit", "version": "3.3.0"}
+                ]
+            },
+            "agent-build-kit@agent-build-kit",
+            "Codex",
+        )
+        self.assertEqual(entry["version"], "3.3.0")
+
     def test_stage_requires_publish(self) -> None:
         self.assertEqual(sync_distributions.main(["--stage"]), 2)
 

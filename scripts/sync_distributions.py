@@ -242,10 +242,14 @@ def _json_output(result: subprocess.CompletedProcess[str], label: str) -> Any:
 
 
 def _find_entry(entries: Any, plugin_id: str, label: str) -> dict[str, Any]:
+    if isinstance(entries, dict):
+        entries = entries.get("installed")
     if not isinstance(entries, list):
         raise SyncError(f"{label}返回的插件列表格式不正确")
     for entry in entries:
-        if isinstance(entry, dict) and entry.get("id") == plugin_id:
+        if isinstance(entry, dict) and (
+            entry.get("id") == plugin_id or entry.get("pluginId") == plugin_id
+        ):
             return entry
     raise SyncError(f"{label}找不到 {plugin_id}")
 
