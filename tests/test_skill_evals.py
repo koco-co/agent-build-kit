@@ -18,6 +18,7 @@ EXPECTED_SKILLS = {
     "build-skill",
     "clarify-idea",
     "handoff",
+    "rename-codex-sessions",
 }
 
 
@@ -46,7 +47,7 @@ class SkillEvalTests(unittest.TestCase):
     def test_repository_eval_assets_pass(self) -> None:
         result = self.run_validator(REPO_ROOT)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("PASS: 8 Skill eval file(s)", result.stdout)
+        self.assertIn("PASS: 9 Skill eval file(s)", result.stdout)
 
     def test_every_shipped_skill_has_exactly_one_eval_file(self) -> None:
         shipped = {path.parent.name for path in REPO_ROOT.glob("skills/*/SKILL.md")}

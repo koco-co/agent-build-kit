@@ -310,6 +310,7 @@ class ValidateSkillTests(unittest.TestCase):
             "handoff",
             "audit-agent-setup",
             "clarify-idea",
+            "rename-codex-sessions",
         }
 
         for skill_md in sorted(REPO_ROOT.glob("skills/*/SKILL.md")):
@@ -320,7 +321,7 @@ class ValidateSkillTests(unittest.TestCase):
             )
             with self.subTest(skill=name, policy="confirmed"):
                 self.assertIn("license: MIT", text.split("---", 2)[1])
-                if name == "build-dev-docs":
+                if name in {"build-dev-docs", "rename-codex-sessions"}:
                     self.assertIn("disable-model-invocation: true", text)
                     self.assertIn("allow_implicit_invocation: false", adapter)
                 else:
@@ -456,6 +457,9 @@ class ValidateSkillTests(unittest.TestCase):
             "handoff": None,
             "audit-agent-setup": None,
             "clarify-idea": None,
+            "rename-codex-sessions": (
+                "需要 Python 3.9+、可调用 Codex App Server，以及 Codex Desktop 本地项目状态文件。"
+            ),
         }
         prohibited = ("当前适配", "目前适配", "目前仅适配")
 
@@ -482,6 +486,7 @@ class ValidateSkillTests(unittest.TestCase):
             "handoff": 'version: "2.1.2"',
             "audit-agent-setup": 'version: "3.0.0"',
             "clarify-idea": 'version: "3.1.0"',
+            "rename-codex-sessions": 'version: "1.0.0"',
         }
 
         for name, version_line in expected.items():

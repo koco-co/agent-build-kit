@@ -14,7 +14,7 @@
 - `scripts/install_skill.py`：将单个 Skill 安装到 Claude Code、Codex、ZCode 或 Pi。
 - `.plugin-shared-files.json`、`skills/build-plugin/scripts/sync_shared_files.py`：记录跨 Skill 共享文件的规范源，并同步普通文件副本，避免客户端缓存遗漏嵌套软链接。
 - `.claude-plugin/`、`.codex-plugin/` 与 `.zcode-plugin/`：三个平台的 Plugin Manifest；`.claude-plugin/marketplace.json` 同时是 Claude Code 与 ZCode 的 Marketplace 配置，`.agents/plugins/marketplace.json` 是 Codex Marketplace 配置；`package.json` 声明 Pi Package 及其 Skills。
-- `evals/skills/`、`scripts/validate_skill_evals.py`：保存八个 Skill 的触发、排除和关键行为用例，并在 CI 中做确定性结构校验，不调用付费模型。
+- `evals/skills/`、`scripts/validate_skill_evals.py`：保存九个 Skill 的触发、排除和关键行为用例，并在 CI 中做确定性结构校验，不调用付费模型。
 - `tests/`：校验器、安装器和仓库约定的回归测试。
 - `README.md`：面向使用者说明能力、安装方法和验证命令，不重复 Skill 的详细流程。
 - `LICENSE`：Agent Build Kit 的 MIT License 正文。

@@ -1,0 +1,7 @@
+interface:
+  display_name: "Rename Codex Sessions"
+  short_description: "按创建日期和实际内容整理 Codex 会话标题"
+  default_prompt: "使用 $rename-codex-sessions，为当前 Codex Desktop 本地项目中的主对话生成标题候选表；严格使用 createdAt 转换 Asia/Shanghai 日期，确认前不要改名，确认后只调用 thread/name/set。"
+
+policy:
+  allow_implicit_invocation: false

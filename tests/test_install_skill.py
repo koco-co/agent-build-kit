@@ -332,7 +332,7 @@ class InstallSkillTests(unittest.TestCase):
                     )
                     if platform == "claude":
                         self.assertFalse(destination.joinpath("agents").exists())
-                        if skill_name == "build-dev-docs":
+                        if skill_name in {"build-dev-docs", "rename-codex-sessions"}:
                             self.assertIn("disable-model-invocation: true", skill_md)
                         else:
                             self.assertNotIn("disable-model-invocation:", skill_md)
@@ -343,13 +343,17 @@ class InstallSkillTests(unittest.TestCase):
                         ).read_text(encoding="utf-8")
                         self.assertIn(
                             "allow_implicit_invocation: "
-                            + ("false" if skill_name == "build-dev-docs" else "true"),
+                            + (
+                                "false"
+                                if skill_name in {"build-dev-docs", "rename-codex-sessions"}
+                                else "true"
+                            ),
                             adapter,
                         )
                     else:
                         self.assertFalse(destination.joinpath("agents").exists())
                         self.assertIn(f"name: {skill_name}", skill_md)
-                        if skill_name == "build-dev-docs":
+                        if skill_name in {"build-dev-docs", "rename-codex-sessions"}:
                             self.assertIn("disable-model-invocation: true", skill_md)
 
     def test_zcode_install_preserves_claude_frontmatter(self) -> None:

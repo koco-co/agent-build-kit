@@ -16,6 +16,7 @@ Agent Build Kit 直接适配 Claude Code、Codex、ZCode 和 Pi。`skills/` 是�
 | Skill | 用途 |
 | --- | --- |
 | [`clarify-idea`](skills/clarify-idea/) | 通过事实核查和逐轮决策，将模糊想法整理为明确的目标、范围与方案 |
+| [`rename-codex-sessions`](skills/rename-codex-sessions/) | 按创建日期和实际内容整理 Codex 本地项目主对话标题，确认后只修改 session 名称 |
 | [`audit-agent-setup`](skills/audit-agent-setup/) | 检查 Agent Skill、Plugin、README 和项目指令，确认后修复并复检 |
 | [`build-skill`](skills/build-skill/) | 构建或审查符合多平台约定的 Agent Skill |
 | [`build-plugin`](skills/build-plugin/) | 构建、升级或迁移 Claude Code、Codex、ZCode 与 Pi 分发包 |
@@ -75,6 +76,7 @@ python3 scripts/install_skill.py build-skill \
 移除 `--dry-run` 后执行安装。`--platform` 支持 `claude`、`codex`、`zcode` 和 `pi`；`--scope` 支持 `user` 和 `project`。将 `build-skill` 替换为以下名称可安装其他独立 Skill：
 
 - `clarify-idea`
+- `rename-codex-sessions`
 - `build-plugin`
 - `build-readme`
 - `build-agents-md`
@@ -141,7 +143,7 @@ python3 skills/build-skill/scripts/validate_skill.py \
   --strict
 ```
 
-静态校验八个 Skill 的触发、排除和关键行为评测资产（不调用模型）：
+静态校验九个 Skill 的触发、排除和关键行为评测资产（不调用模型）：
 
 ```bash
 python3 scripts/validate_skill_evals.py .
