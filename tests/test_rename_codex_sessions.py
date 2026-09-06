@@ -142,6 +142,104 @@ class RenameCodexSessionsTests(unittest.TestCase):
             )
         self.assertNotIn("updatedAt", active)
 
+    def test_rename_preflight_distinguishes_renameable_unavailable_and_unknown(self) -> None:
+        existing_rollout = str(Path(__file__))
+        self.assertEqual(
+            codex_sessions.rename_preflight(
+                {"id": "active", "path": existing_rollout}, archived=False
+            )[0],
+            "renameable",
+        )
+        self.assertEqual(
+            codex_sessions.rename_preflight(
+                {"id": "archived", "path": existing_rollout}, archived=True
+            )[0],
+            "no_rollout",
+        )
+        self.assertEqual(
+            codex_sessions.rename_preflight(
+                {"id": "missing-rollout", "path": "/does/not/exist.jsonl"},
+                archived=False,
+            )[0],
+            "no_rollout",
+        )
+        self.assertEqual(
+            codex_sessions.rename_preflight(
+                {"id": "unknown", "path": None}, archived=False
+            )[0],
+            "unknown",
+        )
+
+    def test_apply_skips_preflight_unavailable_threads_and_reports_write_failures(self) -> None:
+        class FakeClient:
+            def __init__(self) -> None:
+                self.requests: list[tuple[str, dict[str, str]]] = []
+
+            def request(self, method: str, params: dict[str, str]) -> object:
+                self.requests.append((method, params))
+                if params["threadId"] == "write-fails":
+                    raise codex_sessions.CodexSessionError("simulated write failure")
+                return {}
+
+        candidates = [
+            {
+                "threadId": "renameable",
+                "storedName": "旧标题",
+                "renameStatus": "renameable",
+                "renameStatusReason": "",
+            },
+            {
+                "threadId": "no-rollout",
+                "storedName": "旧标题",
+                "renameStatus": "no_rollout",
+                "renameStatusReason": "没有可用 Rollout",
+            },
+            {
+                "threadId": "unknown",
+                "storedName": "旧标题",
+                "renameStatus": "unknown",
+                "renameStatusReason": "无法判断",
+            },
+            {
+                "threadId": "write-fails",
+                "storedName": "旧标题",
+                "renameStatus": "renameable",
+                "renameStatusReason": "",
+            },
+            {
+                "threadId": "after-failure",
+                "storedName": "旧标题",
+                "renameStatus": "renameable",
+                "renameStatusReason": "",
+            },
+        ]
+        mapping = {
+            "renameable": "0906｜功能｜可改名线程",
+            "no-rollout": "0906｜功能｜无Rollout线程",
+            "unknown": "0906｜功能｜未知线程",
+            "write-fails": "0906｜修复｜写入失败线程",
+            "after-failure": "0906｜优化｜失败后继续线程",
+        }
+        client = FakeClient()
+
+        result = codex_sessions.apply_rename_mapping(client, candidates, mapping)
+
+        self.assertEqual(
+            [params["threadId"] for _, params in client.requests],
+            ["renameable", "write-fails", "after-failure"],
+        )
+        self.assertEqual(
+            [item["threadId"] for item in result["changed"]],
+            ["renameable", "after-failure"],
+        )
+        self.assertEqual(
+            [item["threadId"] for item in result["skipped"]],
+            ["no-rollout", "unknown"],
+        )
+        self.assertEqual(
+            [item["threadId"] for item in result["failed"]], ["write-fails"]
+        )
+
     def test_skill_contract_preserves_runtime_gates_and_scope(self) -> None:
         text = (
             REPO_ROOT
@@ -153,6 +251,9 @@ class RenameCodexSessionsTests(unittest.TestCase):
             "createdAt",
             "Asia/Shanghai",
             "thread/name/set",
+            "renameStatus",
+            "no_rollout",
+            "skipped",
             "| 原名称 | 新名称 |",
             "确认后",
             "projectless",

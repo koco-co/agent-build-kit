@@ -7,8 +7,9 @@
       "prompt": "请处理当前 Codex 所有本地项目里的对话，只按 createdAt 和实际内容生成 MMDD｜类型｜主题 标题，确认后只修改 session 名称。",
       "expected": [
         "只筛选已归属本地项目的主对话",
+        "先用只读预检区分 renameable、no_rollout 和 unknown",
         "先输出严格两列表格并等待确认",
-        "确认后只调用 thread/name/set"
+        "确认后只对 renameable 线程调用 thread/name/set"
       ]
     },
     {
@@ -27,6 +28,7 @@
       "expected": [
         "日期只取 createdAt 并按 Asia/Shanghai 转换",
         "主题不明确时原名和新名相同",
+        "no_rollout 和 unknown 线程不进入改名映射",
         "表格确认前不执行写入"
       ]
     },
@@ -36,8 +38,20 @@
       "prompt": "用户确认了候选标题表，现在执行重命名。",
       "expected": [
         "重新核对线程仍属于本地项目主对话",
-        "只发送 thread/name/set",
+        "重新核对 renameStatus，已不可执行的线程跳过",
+        "只对可执行线程发送 thread/name/set",
+        "changed、skipped、failed 分开报告，failed 时不回滚已成功修改",
         "不修改项目归属、排序、置顶或归档状态"
+      ]
+    },
+    {
+      "id": "behavior-archived-no-rollout",
+      "kind": "behavior",
+      "prompt": "候选中有已归档对话，当前 Codex App Server 对它们返回 no rollout found；仍要整理能执行的会话标题。",
+      "expected": [
+        "已归档线程标记为 no_rollout 并保留原名",
+        "不通过 thread/name/set 试探改名能力",
+        "已归档线程不阻止可改名线程继续处理"
       ]
     }
   ]

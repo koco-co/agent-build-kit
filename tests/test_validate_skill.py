@@ -486,7 +486,7 @@ class ValidateSkillTests(unittest.TestCase):
             "handoff": 'version: "2.1.2"',
             "audit-agent-setup": 'version: "3.0.0"',
             "clarify-idea": 'version: "3.1.0"',
-            "rename-codex-sessions": 'version: "1.0.0"',
+            "rename-codex-sessions": 'version: "1.0.1"',
         }
 
         for name, version_line in expected.items():

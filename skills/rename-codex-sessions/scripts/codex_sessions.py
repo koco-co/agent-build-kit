@@ -22,6 +22,9 @@ from zoneinfo import ZoneInfo
 
 ALLOWED_SOURCE_KINDS = ("appServer", "cli", "vscode")
 ALLOWED_TYPES = ("功能", "设计", "修复", "优化", "发布", "探索", "文档", "研究")
+RENAME_STATUS_RENAMEABLE = "renameable"
+RENAME_STATUS_NO_ROLLOUT = "no_rollout"
+RENAME_STATUS_UNKNOWN = "unknown"
 TITLE_PATTERN = re.compile(
     r"^(?:0[1-9]|1[0-2])(?:0[1-9]|[12][0-9]|3[01])｜"
     r"(?:功能|设计|修复|优化|发布|探索|文档|研究)｜[^｜\r\n]+$"
@@ -132,6 +135,31 @@ def is_project_main_thread(
     return source_kind(thread) in ALLOWED_SOURCE_KINDS
 
 
+def rename_preflight(
+    thread: dict[str, Any], archived: bool
+) -> tuple[str, str]:
+    """Classify rename capability without sending a write request."""
+
+    if archived:
+        return (
+            RENAME_STATUS_NO_ROLLOUT,
+            "当前 Codex App Server 对已归档线程的 thread/name/set 返回 no rollout found。",
+        )
+
+    path = thread.get("path")
+    if not isinstance(path, str) or not path or not Path(path).is_absolute():
+        return (
+            RENAME_STATUS_UNKNOWN,
+            "线程没有可核对的绝对 Rollout 路径，无法判断改名能力。",
+        )
+    if not Path(path).is_file():
+        return (
+            RENAME_STATUS_NO_ROLLOUT,
+            "找不到线程对应的 Rollout 文件。",
+        )
+    return RENAME_STATUS_RENAMEABLE, ""
+
+
 def display_name(thread: dict[str, Any]) -> str:
     name = thread.get("name")
     if isinstance(name, str) and name.strip():
@@ -155,6 +183,7 @@ def thread_record(
     if not isinstance(created_at, (int, float)):
         raise CodexSessionError(f"线程 {thread_id} 缺少有效 createdAt，未纳入改名。")
     stored_name = thread.get("name")
+    rename_status, rename_status_reason = rename_preflight(thread, archived)
     return {
         "threadId": thread_id,
         "originalName": display_name(thread),
@@ -163,6 +192,8 @@ def thread_record(
         "createdAt": created_at,
         "dateMMDD": created_at_mmdd(created_at),
         "archived": archived,
+        "renameStatus": rename_status,
+        "renameStatusReason": rename_status_reason,
         "projectId": project_id,
         "projectName": projects[project_id]["name"],
     }
@@ -197,7 +228,7 @@ class AppServerClient:
                 {
                     "clientInfo": {
                         "name": "rename-codex-sessions",
-                        "version": "1.0.0",
+                        "version": "1.0.1",
                     },
                     "capabilities": {"experimentalApi": True},
                 },
@@ -424,37 +455,59 @@ def load_mapping() -> dict[str, str]:
     return mapping
 
 
+def apply_rename_mapping(
+    client: AppServerClient,
+    candidates: list[dict[str, Any]],
+    mapping: dict[str, str],
+) -> dict[str, list[dict[str, str]]]:
+    by_id = {item["threadId"]: item for item in candidates}
+    unknown = sorted(set(mapping) - set(by_id))
+    if unknown:
+        raise CodexSessionError(
+            "改名映射包含当前项目主对话之外的线程，未执行任何改名："
+            + ", ".join(unknown)
+        )
+
+    result: dict[str, list[dict[str, str]]] = {
+        "changed": [],
+        "unchanged": [],
+        "skipped": [],
+        "failed": [],
+    }
+    for thread_id, title in mapping.items():
+        candidate = by_id[thread_id]
+        if candidate["storedName"] == title:
+            result["unchanged"].append({"threadId": thread_id, "name": title})
+            continue
+        rename_status = candidate["renameStatus"]
+        if rename_status != RENAME_STATUS_RENAMEABLE:
+            result["skipped"].append(
+                {
+                    "threadId": thread_id,
+                    "name": title,
+                    "status": rename_status,
+                    "reason": candidate["renameStatusReason"],
+                }
+            )
+            continue
+        try:
+            client.request("thread/name/set", {"threadId": thread_id, "name": title})
+        except CodexSessionError as exc:
+            result["failed"].append(
+                {"threadId": thread_id, "name": title, "error": str(exc)}
+            )
+        else:
+            result["changed"].append({"threadId": thread_id, "name": title})
+    return result
+
+
 def apply_mapping(args: argparse.Namespace) -> int:
     mapping = load_mapping()
     with AppServerClient(args.codex, args.timeout) as client:
         candidates = collect_candidates(client, args.state_file)
-        by_id = {item["threadId"]: item for item in candidates}
-        unknown = sorted(set(mapping) - set(by_id))
-        if unknown:
-            raise CodexSessionError(
-                "改名映射包含当前项目主对话之外的线程，未执行任何改名："
-                + ", ".join(unknown)
-            )
-
-        changed: list[dict[str, str]] = []
-        unchanged: list[dict[str, str]] = []
-        failed: list[dict[str, str]] = []
-        for thread_id, title in mapping.items():
-            if by_id[thread_id]["storedName"] == title:
-                unchanged.append({"threadId": thread_id, "name": title})
-                continue
-            try:
-                client.request(
-                    "thread/name/set", {"threadId": thread_id, "name": title}
-                )
-            except CodexSessionError as exc:
-                failed.append(
-                    {"threadId": thread_id, "name": title, "error": str(exc)}
-                )
-            else:
-                changed.append({"threadId": thread_id, "name": title})
-    write_json({"changed": changed, "unchanged": unchanged, "failed": failed})
-    return 1 if failed else 0
+        result = apply_rename_mapping(client, candidates, mapping)
+    write_json(result)
+    return 1 if result["failed"] else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
