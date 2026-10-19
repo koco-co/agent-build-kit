@@ -374,6 +374,16 @@ def _zcode_app_version(cli: Path) -> str | None:
     return value if isinstance(value, str) else None
 
 
+def _zcode_provider_env(cli: Path) -> dict[str, str]:
+    """Point ZCode 3.15+ at the bundled provider config beside its resources."""
+    if os.environ.get("ZCODE_BUILTIN_PROVIDER_CONFIG_FILE"):
+        return {}
+    bundled = cli.parent.parent / "config" / "provider" / "zcode-builtin.json"
+    if not bundled.is_file():
+        return {}
+    return {"ZCODE_BUILTIN_PROVIDER_CONFIG_FILE": str(bundled)}
+
+
 def zcode_request(
     root: Path,
     method: str,
@@ -388,6 +398,7 @@ def zcode_request(
     app_version = _zcode_app_version(cli)
     if app_version:
         environment["ZCODE_APP_VERSION"] = app_version
+    environment.update(_zcode_provider_env(cli))
 
     try:
         process = subprocess.Popen(

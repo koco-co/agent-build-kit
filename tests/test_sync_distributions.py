@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -90,6 +91,24 @@ class SyncDistributionsTests(unittest.TestCase):
                 "workspaceKey": str(REPO_ROOT),
             },
         )
+
+    def test_zcode_provider_env_finds_the_bundled_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            resources = Path(temp) / "Resources"
+            cli = resources / "glm" / "zcode.cjs"
+            cli.parent.mkdir(parents=True)
+            cli.write_text("", encoding="utf-8")
+            bundled = resources / "config" / "provider" / "zcode-builtin.json"
+            bundled.parent.mkdir(parents=True)
+            bundled.write_text("{}", encoding="utf-8")
+            with patch.dict(
+                sync_distributions.os.environ,
+                {"ZCODE_BUILTIN_PROVIDER_CONFIG_FILE": ""},
+            ):
+                self.assertEqual(
+                    sync_distributions._zcode_provider_env(cli),
+                    {"ZCODE_BUILTIN_PROVIDER_CONFIG_FILE": str(bundled)},
+                )
 
     def test_find_entry_accepts_codex_installed_payload(self) -> None:
         entry = sync_distributions._find_entry(
