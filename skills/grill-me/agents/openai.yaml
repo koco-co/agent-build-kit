@@ -1,0 +1,7 @@
+interface:
+  display_name: "Grill Me"
+  short_description: "Relentlessly stress-test a plan, decision, or idea"
+  default_prompt: "Use $grill-me to interview me in rounds about this plan. Map the design tree, ask the current frontier as numbered questions with recommended answers, and do not act until I confirm we share the same understanding."
+
+policy:
+  allow_implicit_invocation: true

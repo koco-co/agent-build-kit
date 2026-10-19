@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-- 本仓库为 Claude Code、Codex 与 ZCode 分发 `agent-build-kit` Plugin，并为 Pi 分发 Package；也支持从 `skills/` 单独安装不依赖其他 Skill 的能力。
+- 本仓库为 Claude Code、Codex 与 ZCode 分发 `agent-build-kit` Plugin，为 Pi 分发 Package，也支持从 `skills/` 单独安装不依赖其他 Skill 的能力；DeepSeek Harness（DSH）通过用户级或项目级 Skill 目录使用同一份 Skill。
 - `skills/` 是 Skill 行为的权威来源；Claude Code 专用配置写在 `SKILL.md` Frontmatter，Codex 专用配置写在 `agents/openai.yaml`。
 - `AGENTS.md` 是仓库开发说明的唯一正文；`CLAUDE.md` 是只包含 `@AGENTS.md` 的普通文件，供 Claude Code 导入同一正文。
 
@@ -11,7 +11,7 @@
 - `skills/<name>/SKILL.md`：Skill 的入口与主流程；详细内容按需放入同目录的 `workflows/`、`rules/`、`templates/`、`examples/` 和 `checklists/`。
 - `skills/build-skill/scripts/validate_skill.py`：检查单个 Skill 的结构和多平台配置。
 - `skills/build-plugin/scripts/validate_plugin.py`：检查 Plugin Manifest、组件、共享文件镜像、符号链接安全和版本号。
-- `scripts/install_skill.py`：将单个 Skill 安装到 Claude Code、Codex、ZCode 或 Pi。
+- `scripts/install_skill.py`：将单个 Skill 安装到 Claude Code、Codex、ZCode、Pi 或 DSH。
 - `scripts/sync_distributions.py`：合并执行发布前门禁，并在显式发布模式下提交、推送和同步四个平台分发。
 - `.plugin-shared-files.json`、`skills/build-plugin/scripts/sync_shared_files.py`：记录跨 Skill 共享文件的规范源，并同步普通文件副本，避免客户端缓存遗漏嵌套软链接。
 - `.claude-plugin/`、`.codex-plugin/` 与 `.zcode-plugin/`：三个平台的 Plugin Manifest；`.claude-plugin/marketplace.json` 同时是 Claude Code 与 ZCode 的 Marketplace 配置，`.agents/plugins/marketplace.json` 是 Codex Marketplace 配置；`package.json` 声明 Pi Package 及其 Skills。
@@ -41,10 +41,10 @@
 - 调用策略写在平台配置中；目标 Skill 允许模型调用时，按 `skills/build-skill/rules/quality-standard.md` 写清触发条件和排除条件。
 - 跨 Skill 运行依赖在 `.plugin-shared-files.json` 中声明，仓库保存普通文件副本。修改规范源后执行同步；副本缺失、使用软链接或内容与规范源不一致时，严格校验必须失败。
 - 项目级 `CLAUDE.md` 不使用符号链接，必须是只包含 `@AGENTS.md` 的普通文件；其他确需使用的符号链接必须是仓库内相对链接，不得假设 Plugin 客户端缓存会保留嵌套软链接。
-- Claude Code 安装副本保留 Claude Code 支持的 Frontmatter，并移除 `agents/`；Codex 安装副本移除 Claude Code 专用 Frontmatter，并保留 `agents/openai.yaml`；ZCode 与 Pi 忽略未识别的 Frontmatter 键，安装副本保留完整 Frontmatter 并移除 `agents/`。
-- 当前只直接维护 Claude Code、Codex、ZCode 与 Pi；不再维护 DSH 专用包、镜像、安装分支或验证流程。
+- Claude Code 安装副本保留 Claude Code 支持的 Frontmatter，并移除 `agents/`；Codex 安装副本移除 Claude Code 专用 Frontmatter，并保留 `agents/openai.yaml`；ZCode、Pi 与 DSH 忽略未识别的 Frontmatter 键，安装副本保留完整 Frontmatter 并移除 `agents/`。
+- 直接维护 Claude Code、Codex、ZCode、Pi 的 Plugin/Package 与 Skill 安装，以及 DSH 的 Skill 安装；不为 DSH 维护 Plugin Manifest、专用包或镜像。
 - 破坏性兼容变更递增 Plugin major 版本，新增向后兼容能力递增 minor 版本，修复递增 patch 版本；五个正式版本号（`.claude-plugin/plugin.json`、`.claude-plugin/marketplace.json`、`.codex-plugin/plugin.json`、`.zcode-plugin/plugin.json` 与 `package.json`）必须一致。Skill 的 `metadata.version` 独立维护。
-- 静态校验、安装成功和测试用例能被识别，都不能代替在真实 Claude Code/Codex/ZCode/Pi 客户端中验证行为。
+- 静态校验、安装成功和测试用例能被识别，都不能代替在真实 Claude Code/Codex/ZCode/Pi/DSH 客户端中验证行为。
 
 ## 验证流程
 
@@ -62,6 +62,6 @@
 
 ## 提交与发布
 
-- Skill 与 Plugin 的详细交付流程分别维护在 `skills/build-skill/workflows/§06-delivery.md` 和 `skills/build-plugin/workflows/§07-delivery.md`，本文件不复制具体发布命令。
+- Skill 与 Plugin 的详细交付流程分别维护在 `skills/build-skill/workflows/§04-validation-delivery.md` 和 `skills/build-plugin/workflows/§05-validation-delivery.md`，本文件不复制具体发布命令。
 - 实现和验证结束后，主动询问用户是否执行当前任务需要的 commit、push、Claude Code Plugin 更新、Codex Plugin 更新、ZCode Plugin 更新和 Pi Package 更新；允许只授权部分操作。
 - 普通开发流程不得自动 commit、push 或更新本地 Plugin；用户明确执行 `scripts/sync_distributions.py --publish` 时，视为一次性授权该脚本按既定顺序完成这些动作。

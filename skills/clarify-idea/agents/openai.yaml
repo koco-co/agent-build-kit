@@ -1,7 +1,0 @@
-interface:
-  display_name: "Clarify Idea"
-  short_description: "补全想法、发现遗漏并校正不合理需求"
-  default_prompt: "使用 $clarify-idea，结合项目现状、已有知识和市场调研明确方案，主动识别遗漏和不合理需求，逐项向我说明依据、影响和推荐调整；把我确认的内容纳入改动范围，总结共同理解后再确认是否开始实施，确认前不得改动项目内容。"
-
-policy:
-  allow_implicit_invocation: true

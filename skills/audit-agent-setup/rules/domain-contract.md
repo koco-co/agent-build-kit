@@ -2,10 +2,10 @@
 
 ## 范围
 
-本 Skill 固定覆盖四个项目规范领域：
+本 Skill 覆盖四个项目规范领域：
 
 1. Agent Skill；
-2. Plugin；
+2. Plugin 与 Pi Package；
 3. README；
 4. AGENTS.md 与 CLAUDE.md。
 
@@ -31,19 +31,19 @@
 - Plugin 内已包含的 Skills 由 Plugin 领域统一检查，本领域不重复检查。
 - 没有 Skill 时，只在仓库证据表明同一 Agent 工作流已经重复出现并且具有稳定输入、步骤、输出和验收时，报告可将该工作流整理为 Skill；没有重复证据则记为未发现问题。
 
-### Plugin
+### Plugin 与 Pi Package
 
-- 存在 Plugin 时，由 `build-plugin` 检查 Manifest、组件发现、Skill 纳入、共享镜像、平台适配、版本与分发契约。
-- 没有 Plugin 时，只在仓库已经存在跨项目安装、组件打包、多平台分发或版本发布需要时，报告需要建立 Plugin；普通项目没有 Plugin 不构成问题。
+- 存在 Plugin 或 Pi Package 时，由 `build-plugin` 检查 Manifest、组件发现、Skill 纳入、共享镜像、平台适配、版本与分发契约。Pi Package 的入口是根 `package.json` 的 `pi.skills`。
+- 没有 Plugin 且没有 Pi Package 时，只在仓库已经存在跨项目安装、组件打包、多平台分发或版本发布需要时，报告需要建立对应的分发形态；普通项目不构成问题。
 
 ### README
 
 - 由 `build-readme` 对照稳定项目事实检查 README 的存在必要性、功能、安装、运行、验证、限制和本地引用。
 - README 缺失不自动构成问题；只有当前项目确实需要面向使用者的仓库入口时才报告。
-- 修复前仍须展示具体 README 修改预览并取得内容确认。
+- 修复前遵循 `build-readme` 的预览条件：用户要求预览，或修改会新增、整体替换正文、改变公开内容或文件范围时，先展示预览并取得内容确认；明确的局部事实修正可直接执行。
 
 ### AGENTS.md 与 CLAUDE.md
 
-- 由 `build-agents-md` 检查项目指令是否必要、是否与真实目录和命令一致，以及 `CLAUDE.md` 是否为只包含 `@AGENTS.md` 的有效普通文件。
+- 由 `build-agents-md` 检查项目指令是否必要、是否与真实目录和命令一致，以及 `CLAUDE.md` 是否为只包含 `@AGENTS.md` 的有效普通文件；DeepSeek Harness 直接读取 `AGENTS.md`，不依赖 `CLAUDE.md`。
 - 新项目的初始阶段只记录现状；工具链和真实命令尚未稳定时，不因文件尚未创建而报告问题。
-- 修复前仍须展示完整正文和全部文件操作并取得内容确认。
+- 修复前遵循 `build-agents-md` 的预览条件：新增、整体重构、扩大范围或删除内容时展示完整正文和全部文件操作；明确的局部事实修正可直接执行。

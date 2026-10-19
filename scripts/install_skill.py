@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Install a source Skill into Claude Code, Codex, ZCode, or Pi.
+"""Install a source Skill into Claude Code, Codex, ZCode, Pi, or DeepSeek Harness.
 
-The repository is distributed as a Plugin or package for these platforms.
-This installer creates a standalone copy for the selected platform:
+The repository is distributed as a Plugin or package for the first four platforms.
+DeepSeek Harness reads a user or project skills directory directly, so it gets a
+standalone copy instead of a manifest-based package.
 - Claude Code preserves the source frontmatter and removes Codex UI metadata.
 - Codex removes Claude-only frontmatter and keeps agents/openai.yaml.
-- ZCode and Pi preserve the source frontmatter (unrecognized keys are ignored)
-  and remove Codex UI metadata.
+- ZCode, Pi, and DeepSeek Harness preserve the source frontmatter (unrecognized
+  keys are ignored) and remove Codex UI metadata.
 Repository-internal symlinks are dereferenced in the installed copy.
 """
 
@@ -74,7 +75,7 @@ def resolve_destination(
     project_dir: Path | None = None,
     home_dir: Path | None = None,
 ) -> Path:
-    if platform not in {"claude", "codex", "zcode", "pi"}:
+    if platform not in {"claude", "codex", "zcode", "pi", "dsh"}:
         raise InstallError(f"不支持的平台：{platform}")
     if scope not in {"user", "project"}:
         raise InstallError(f"不支持的安装范围：{scope}")
@@ -84,8 +85,15 @@ def resolve_destination(
         "codex": ".agents",
         "zcode": ".zcode",
         "pi": ".pi/agent" if scope == "user" else ".pi",
+        "dsh": ".dsh",
     }
     if scope == "user":
+        if platform == "dsh" and home_dir is None and os.environ.get("DSH_HOME"):
+            return (
+                Path(os.environ["DSH_HOME"]).expanduser().resolve()
+                / "skills"
+                / skill_name
+            )
         base = (home_dir or Path.home()).expanduser().resolve()
     else:
         base = (project_dir or Path.cwd()).expanduser().resolve()
@@ -204,8 +212,8 @@ def install_skill(
             )
             profile = "codex"
         else:
-            # Claude Code keeps the full frontmatter; ZCode and Pi ignore
-            # unsupported keys at load time. All three drop Codex metadata.
+            # Claude Code keeps the full frontmatter; ZCode, Pi, and DeepSeek
+            # Harness ignore unsupported keys at load time. All drop Codex metadata.
             agents = stage / "agents"
             if agents.exists():
                 shutil.rmtree(agents)
@@ -238,11 +246,13 @@ def install_skill(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="为 Claude Code、Codex、ZCode 或 Pi 安装独立的 Skill 副本。"
+        description="为 Claude Code、Codex、ZCode、Pi 或 DeepSeek Harness 安装独立的 Skill 副本。"
     )
     parser.add_argument("skill", help="skills/ 下的 Skill 目录名")
     parser.add_argument(
-        "--platform", choices=("claude", "codex", "zcode", "pi"), required=True
+        "--platform",
+        choices=("claude", "codex", "zcode", "pi", "dsh"),
+        required=True,
     )
     parser.add_argument("--scope", choices=("user", "project"), default="user")
     parser.add_argument(

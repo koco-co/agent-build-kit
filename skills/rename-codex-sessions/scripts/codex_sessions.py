@@ -17,7 +17,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 
 ALLOWED_SOURCE_KINDS = ("appServer", "cli", "vscode")
@@ -41,12 +41,13 @@ def default_state_file() -> Path:
     return Path.home() / ".codex" / ".codex-global-state.json"
 
 
-def created_at_mmdd(created_at: int | float) -> str:
-    """Convert the App Server's Unix-second createdAt to Asia/Shanghai MMDD."""
+def created_at_mmdd(
+    created_at: int | float, timezone_name: str | None = None
+) -> str:
+    """Convert the App Server's Unix-second createdAt to a local MMDD."""
 
-    return datetime.fromtimestamp(
-        created_at, tz=ZoneInfo("Asia/Shanghai")
-    ).strftime("%m%d")
+    tz = ZoneInfo(timezone_name) if timezone_name else None
+    return datetime.fromtimestamp(created_at, tz=tz).strftime("%m%d")
 
 
 def is_valid_title(title: object) -> bool:
@@ -175,6 +176,7 @@ def thread_record(
     archived: bool,
     projects: dict[str, dict[str, str]],
     assignments: dict[str, Any],
+    timezone_name: str | None = None,
 ) -> dict[str, Any]:
     thread_id = thread["id"]
     assignment = assignments[thread_id]
@@ -190,7 +192,7 @@ def thread_record(
         "storedName": stored_name if isinstance(stored_name, str) else None,
         "preview": thread.get("preview", ""),
         "createdAt": created_at,
-        "dateMMDD": created_at_mmdd(created_at),
+        "dateMMDD": created_at_mmdd(created_at, timezone_name),
         "archived": archived,
         "renameStatus": rename_status,
         "renameStatusReason": rename_status_reason,
@@ -228,7 +230,7 @@ class AppServerClient:
                 {
                     "clientInfo": {
                         "name": "rename-codex-sessions",
-                        "version": "1.0.1",
+                        "version": "1.1.0",
                     },
                     "capabilities": {"experimentalApi": True},
                 },
@@ -336,7 +338,9 @@ def list_threads(client: AppServerClient, archived: bool) -> list[dict[str, Any]
 
 
 def collect_candidates(
-    client: AppServerClient, state_file: Path
+    client: AppServerClient,
+    state_file: Path,
+    timezone_name: str | None = None,
 ) -> list[dict[str, Any]]:
     projects, assignments = load_project_state(state_file)
     records: dict[str, dict[str, Any]] = {}
@@ -347,7 +351,7 @@ def collect_candidates(
             thread_id = thread["id"]
             if thread_id not in records:
                 records[thread_id] = thread_record(
-                    thread, archived, projects, assignments
+                    thread, archived, projects, assignments, timezone_name
                 )
     return sorted(
         records.values(),
@@ -420,7 +424,7 @@ def list_items(client: AppServerClient, thread_id: str) -> list[dict[str, Any]]:
 
 def read_candidates(args: argparse.Namespace) -> None:
     with AppServerClient(args.codex, args.timeout) as client:
-        candidates = collect_candidates(client, args.state_file)
+        candidates = collect_candidates(client, args.state_file, args.timezone)
         candidate = next(
             (item for item in candidates if item["threadId"] == args.thread_id),
             None,
@@ -523,10 +527,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     list_parser = subparsers.add_parser("list", help="列出符合范围的项目主对话")
     add_common(list_parser)
+    list_parser.add_argument(
+        "--timezone",
+        help="按指定 IANA 时区计算 MMDD；省略时使用系统本地时区",
+    )
 
     content_parser = subparsers.add_parser("content", help="读取一条项目主对话的语义内容")
     add_common(content_parser)
     content_parser.add_argument("--thread-id", required=True)
+    content_parser.add_argument(
+        "--timezone",
+        help="按指定 IANA 时区计算 MMDD；省略时使用系统本地时区",
+    )
 
     apply_parser = subparsers.add_parser("apply", help="应用确认后的标题映射")
     add_common(apply_parser)
@@ -544,7 +556,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "list":
             with AppServerClient(args.codex, args.timeout) as client:
-                write_json({"threads": collect_candidates(client, args.state_file)})
+                write_json(
+                    {
+                        "threads": collect_candidates(
+                            client, args.state_file, args.timezone
+                        )
+                    }
+                )
             return 0
         if args.command == "content":
             read_candidates(args)
@@ -556,7 +574,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             return apply_mapping(args)
         parser.error(f"未知命令：{args.command}")
-    except (CodexSessionError, OSError, ValueError) as exc:
+    except (CodexSessionError, OSError, ValueError, ZoneInfoNotFoundError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 

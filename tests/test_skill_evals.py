@@ -16,7 +16,7 @@ EXPECTED_SKILLS = {
     "build-plugin",
     "build-readme",
     "build-skill",
-    "clarify-idea",
+    "grill-me",
     "handoff",
     "rename-codex-sessions",
 }

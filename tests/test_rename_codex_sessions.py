@@ -25,7 +25,16 @@ SPEC.loader.exec_module(codex_sessions)
 class RenameCodexSessionsTests(unittest.TestCase):
     def test_created_at_is_converted_to_shanghai_without_using_updated_at(self) -> None:
         created_at = datetime(2026, 9, 5, 16, 30, tzinfo=timezone.utc).timestamp()
-        self.assertEqual(codex_sessions.created_at_mmdd(created_at), "0906")
+        self.assertEqual(
+            codex_sessions.created_at_mmdd(created_at, "Asia/Shanghai"), "0906"
+        )
+        self.assertEqual(codex_sessions.created_at_mmdd(created_at, "UTC"), "0905")
+
+    def test_content_accepts_timezone_for_consistent_dates(self) -> None:
+        args = codex_sessions.build_parser().parse_args(
+            ["content", "--thread-id", "thread-1", "--timezone", "Asia/Shanghai"]
+        )
+        self.assertEqual(args.timezone, "Asia/Shanghai")
 
     def test_project_filter_keeps_assigned_main_threads_only(self) -> None:
         projects = {
@@ -250,6 +259,8 @@ class RenameCodexSessionsTests(unittest.TestCase):
         for required in (
             "createdAt",
             "Asia/Shanghai",
+            "系统本地时区",
+            "unchanged",
             "thread/name/set",
             "renameStatus",
             "no_rollout",

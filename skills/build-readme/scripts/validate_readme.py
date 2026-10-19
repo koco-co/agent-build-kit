@@ -45,6 +45,10 @@ VOID_TAGS = {
     "wbr",
 }
 SKIPPED_SCHEMES = ("mailto:", "tel:", "data:", "javascript:")
+AUTOLINK_RE = re.compile(
+    r"<(?:https?://[^<>\s]+|mailto:[^<>\s]+|[^<>\s@]+@[^<>\s]+\.[^<>\s]+)>",
+    re.IGNORECASE,
+)
 
 
 @dataclass(frozen=True)
@@ -139,6 +143,11 @@ def mask_code(text: str) -> str:
     return re.sub(r"`[^`\n]+`", lambda match: " " * len(match.group(0)), masked)
 
 
+def mask_autolinks(text: str) -> str:
+    """Mask GFM autolinks so HTMLParser does not treat them as tags."""
+    return AUTOLINK_RE.sub(lambda match: " " * len(match.group(0)), text)
+
+
 def validate_structure(text: str, path: Path, issues: list[Issue]) -> None:
     headings = list(re.finditer(r"^(#{1,6})\s+\S.*$", mask_code(text), re.MULTILINE))
     if not headings:
@@ -176,7 +185,7 @@ def validate_structure(text: str, path: Path, issues: list[Issue]) -> None:
 def validate_html(text: str, path: Path, issues: list[Issue]) -> None:
     parser = BalancedHTMLParser()
     try:
-        parser.feed(mask_code(text))
+        parser.feed(mask_autolinks(mask_code(text)))
         parser.close()
         parser.finish()
     except Exception as exc:  # HTMLParser can surface malformed declarations.
@@ -272,6 +281,12 @@ def validate_svg(target: Path, issues: list[Issue]) -> None:
         tag = element.tag.rsplit("}", 1)[-1].casefold()
         if tag in {"script", "foreignobject"}:
             unsafe.append(f"禁止元素 <{tag}>")
+        if tag == "style" and element.text:
+            style = element.text.casefold()
+            if re.search(r"@import\b", style) or re.search(
+                r"url\s*\(\s*(?:https?:|//|javascript:)", style
+            ):
+                unsafe.append("禁止 <style> 中的 @import 或外部 URL")
         for raw_name, raw_value in element.attrib.items():
             name = raw_name.rsplit("}", 1)[-1].casefold()
             value = raw_value.strip().casefold()

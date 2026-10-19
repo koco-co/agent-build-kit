@@ -127,6 +127,43 @@ class ValidateSkillTests(unittest.TestCase):
             result = self.run_validator(skill_dir, profile="pi")
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
+    def test_dsh_profile_accepts_unknown_fields_and_canonical_policy(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            skill_dir = self.write_skill(
+                Path(temp),
+                "dsh-skill",
+                'disable-model-invocation: true\nargument-hint: "target"\n',
+            )
+            result = self.run_validator(skill_dir, profile="dsh")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_dsh_profile_rejects_legacy_invocation_key(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            skill_dir = self.write_skill(
+                Path(temp),
+                "legacy-skill",
+                "disableModelInvocation: true\n",
+            )
+            result = self.run_validator(skill_dir, profile="dsh")
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("LEGACY_INVOCATION_KEY", result.stdout)
+            self.assertIn("disableModelInvocation", result.stdout)
+
+    def test_dsh_profile_warns_when_description_exceeds_catalog_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            skill_dir = Path(temp) / "long-description"
+            skill_dir.mkdir(parents=True)
+            description = "a" * 501
+            skill_dir.joinpath("SKILL.md").write_text(
+                f"---\nname: long-description\ndescription: {description}\n---\n\n"
+                + textwrap.dedent(VALID_BODY).strip()
+                + "\n",
+                encoding="utf-8",
+            )
+            result = self.run_validator(skill_dir, profile="dsh", strict=True)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("DESCRIPTION_DSH_LENGTH", result.stdout)
+
     def test_broken_reference_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             skill_dir = self.write_skill(Path(temp), "broken-skill")
@@ -309,7 +346,7 @@ class ValidateSkillTests(unittest.TestCase):
             "build-skill",
             "handoff",
             "audit-agent-setup",
-            "clarify-idea",
+            "grill-me",
             "rename-codex-sessions",
         }
 
@@ -319,8 +356,9 @@ class ValidateSkillTests(unittest.TestCase):
             adapter = skill_md.parent.joinpath("agents", "openai.yaml").read_text(
                 encoding="utf-8"
             )
+            frontmatter = text.split("---", 2)[1]
             with self.subTest(skill=name, policy="confirmed"):
-                self.assertIn("license: MIT", text.split("---", 2)[1])
+                self.assertIn("license: MIT", frontmatter)
                 if name in {"build-dev-docs", "rename-codex-sessions"}:
                     self.assertIn("disable-model-invocation: true", text)
                     self.assertIn("allow_implicit_invocation: false", adapter)
@@ -328,8 +366,12 @@ class ValidateSkillTests(unittest.TestCase):
                     self.assertIn(name, model_invocable)
                     self.assertNotIn("disable-model-invocation:", text)
                     self.assertIn("allow_implicit_invocation: true", adapter)
-                self.assertIn("时使用", text.split("---", 2)[1])
-                self.assertRegex(text.split("---", 2)[1], r"不用于|不使用")
+                if name == "grill-me":
+                    self.assertIn("Use when", frontmatter)
+                    self.assertIn("Not for", frontmatter)
+                else:
+                    self.assertIn("时使用", frontmatter)
+                    self.assertRegex(frontmatter, r"不用于|不使用")
             for phrase in redundant_phrases:
                 with self.subTest(skill=name, phrase=phrase):
                     self.assertNotIn(phrase, text)
@@ -354,8 +396,8 @@ class ValidateSkillTests(unittest.TestCase):
             skill_root / "rules" / "quality-standard.md",
             skill_root / "rules" / "platform-compatibility.md",
             skill_root / "workflows" / "§01-research.md",
-            skill_root / "workflows" / "§03-design.md",
-            skill_root / "workflows" / "§04-implementation.md",
+            skill_root / "workflows" / "§02-design.md",
+            skill_root / "workflows" / "§03-implementation.md",
             skill_root / "checklists" / "design-review.md",
             skill_root / "checklists" / "content-review.md",
             skill_root / "templates" / "design-proposal.template.md",
@@ -369,7 +411,7 @@ class ValidateSkillTests(unittest.TestCase):
             "随项目或整体安装包",
             "独立安装",
             "Skill 自有",
-            "MJS",
+            "Node",
             "Shell",
             "Python",
             "第三方依赖",
@@ -379,7 +421,7 @@ class ValidateSkillTests(unittest.TestCase):
                 self.assertIn(required, contract)
 
         self.assertIn(
-            "node .agents/scripts/release-evidence.mjs",
+            "python3 .agents/scripts/release-evidence.py <fixture>",
             (skill_root / "examples" / "project-skill.example.md").read_text(
                 encoding="utf-8"
             ),
@@ -453,10 +495,10 @@ class ValidateSkillTests(unittest.TestCase):
             "build-dev-docs": None,
             "build-plugin": "需要访问互联网；内置静态校验脚本需要 Python 3.9+。",
             "build-readme": "需要 Python 3.9+ 运行内置校验脚本。",
-            "build-skill": "需要访问互联网；内置静态校验脚本需要 Python 3.9+。",
+            "build-skill": "核对平台契约需要访问互联网；内置校验脚本需要 Python 3.9+。",
             "handoff": None,
             "audit-agent-setup": None,
-            "clarify-idea": None,
+            "grill-me": None,
             "rename-codex-sessions": (
                 "需要 Python 3.9+、可调用 Codex App Server，以及 Codex Desktop 本地项目状态文件。"
             ),
@@ -478,15 +520,15 @@ class ValidateSkillTests(unittest.TestCase):
 
     def test_behavior_changed_skill_versions_are_updated(self) -> None:
         expected = {
-            "build-agents-md": 'version: "4.0.0"',
-            "build-dev-docs": 'version: "3.0.0"',
-            "build-plugin": 'version: "3.0.0"',
-            "build-readme": 'version: "3.0.0"',
-            "build-skill": 'version: "3.0.0"',
-            "handoff": 'version: "2.1.2"',
-            "audit-agent-setup": 'version: "3.0.0"',
-            "clarify-idea": 'version: "3.1.0"',
-            "rename-codex-sessions": 'version: "1.0.1"',
+            "build-agents-md": 'version: "4.1.0"',
+            "build-dev-docs": 'version: "3.1.0"',
+            "build-plugin": 'version: "3.1.0"',
+            "build-readme": 'version: "3.1.0"',
+            "build-skill": 'version: "3.1.1"',
+            "handoff": 'version: "2.1.4"',
+            "audit-agent-setup": 'version: "3.1.1"',
+            "grill-me": 'version: "1.0.1"',
+            "rename-codex-sessions": 'version: "1.1.0"',
         }
 
         for name, version_line in expected.items():
@@ -496,113 +538,74 @@ class ValidateSkillTests(unittest.TestCase):
                 )
                 self.assertIn(version_line, text)
 
-    def test_clarify_idea_publishes_an_explicit_implementation_gate(self) -> None:
-        clarify = REPO_ROOT.joinpath("skills", "clarify-idea", "SKILL.md").read_text(
+    def test_grill_me_publishes_design_tree_rounds_and_confirmation_gate(self) -> None:
+        skill = REPO_ROOT.joinpath("skills", "grill-me", "SKILL.md").read_text(
             encoding="utf-8"
         )
         adapter = REPO_ROOT.joinpath(
-            "skills", "clarify-idea", "agents", "openai.yaml"
-        ).read_text(encoding="utf-8")
-        ui_rule = REPO_ROOT.joinpath(
-            "skills", "clarify-idea", "rules", "ui-interaction-preview.md"
+            "skills", "grill-me", "agents", "openai.yaml"
         ).read_text(encoding="utf-8")
 
         for required in (
-            "只有目标、范围、需求合理性和关键取舍均已明确",
-            "每轮只提出一个需要用户决定、且会影响结果的问题",
-            "等待用户回答",
-            "共同理解得到最终确认前",
-            "不得改动项目内容",
-            "每次回答聚焦当前问题",
-            "请用户确认是否开始实施",
-            "得到用户最终确认后，才允许按照已确认的范围编辑项目内容",
-            "出现新的待决策事项时，回到第 2 步",
-            "rules/ui-interaction-preview.md",
+            "design tree",
+            "Work the tree in **rounds**",
+            "Ask the whole frontier in one round",
+            "number each question and give your recommended answer",
+            "wait for the user's answers before the next round",
+            'Word each question so "yes" accepts your recommended answer',
+            "Recompute the frontier and ask the next round",
+            "belongs to a _later_ round, not this one",
         ):
             with self.subTest(required=required):
-                self.assertIn(required, clarify)
+                self.assertIn(required, skill)
 
-        self.assertIn("确认前不得改动项目内容", adapter)
-        self.assertIn("确认是否开始实施", adapter)
-        self.assertIn("共同理解得到最终确认前", ui_rule)
-        self.assertIn("不得改动项目内容", ui_rule)
+        for required in (
+            "Finding _facts_ is your job, never the user's",
+            "dispatch a sub-agent in read-only mode to find it",
+            "Don't block on exploration",
+            "ask the rest of the frontier now",
+            "The _decisions_ are the user's",
+        ):
+            with self.subTest(facts=required):
+                self.assertIn(required, skill)
 
-    def test_clarify_idea_combines_research_and_reports_scope_before_confirmation(
-        self,
-    ) -> None:
-        clarify = REPO_ROOT.joinpath("skills", "clarify-idea", "SKILL.md").read_text(
-            encoding="utf-8"
+        for required in (
+            "The session is done when the frontier is empty",
+            "Do not act on it until the user confirms you have reached a shared understanding",
+        ):
+            with self.subTest(confirmation=required):
+                self.assertIn(required, skill)
+
+        self.assertIn("design tree", adapter)
+        self.assertIn("do not act until I confirm", adapter)
+
+    def test_grill_me_describes_trigger_and_exclusion(self) -> None:
+        frontmatter = (
+            REPO_ROOT.joinpath("skills", "grill-me", "SKILL.md")
+            .read_text(encoding="utf-8")
+            .split("---", 2)[1]
         )
-        steps = {
-            line.split(". ", 1)[0]: line.split(". ", 1)[1]
-            for line in clarify.splitlines()
-            if line[:1].isdigit() and ". " in line
-        }
 
-        for required in (
-            "了解项目现状",
-            "模型已有知识",
-            "查阅相关资料并开展市场调研",
-            "同类产品、常见做法和可选方案",
-            "综合比较后提出推荐方案",
-            "推荐理由与主要取舍",
-            "能够自行查明的信息，不再询问用户",
-        ):
-            with self.subTest(research=required):
-                self.assertIn(required, steps["1"])
+        self.assertIn("Use when the user wants to stress-test", frontmatter)
+        self.assertIn("'grill' trigger phrases", frontmatter)
+        self.assertIn("Not for ordinary questions", frontmatter)
 
-        summary, confirmation = steps["5"].split("随后", 1)
-        for required in (
-            "所有决策梳理清楚后",
-            "总结共同理解",
-            "目标、选定方案、选择依据和关键取舍",
-            "结合项目实际内容",
-            "哪些功能、模块或使用流程会受到影响",
-            "计划修改哪些文件和具体内容",
-        ):
-            with self.subTest(summary=required):
-                self.assertIn(required, summary)
-        self.assertIn("请用户确认是否开始实施", confirmation)
-
-    def test_clarify_idea_challenges_incomplete_or_unreasonable_scope(self) -> None:
-        clarify = REPO_ROOT.joinpath("skills", "clarify-idea", "SKILL.md").read_text(
-            encoding="utf-8"
+    def test_grill_me_replaces_clarify_idea_resources(self) -> None:
+        self.assertFalse(REPO_ROOT.joinpath("skills", "clarify-idea").exists())
+        self.assertFalse(
+            REPO_ROOT.joinpath("evals", "skills", "clarify-idea.json").exists()
         )
-        adapter = REPO_ROOT.joinpath(
-            "skills", "clarify-idea", "agents", "openai.yaml"
-        ).read_text(encoding="utf-8")
-
-        frontmatter = clarify.split("---", 2)[1]
-        body = clarify.split("---", 2)[2]
-
-        for required in (
-            "目标、范围、需求合理性和关键取舍均已明确",
-            "未发现会改变结果的重要遗漏或不合理需求",
-        ):
-            with self.subTest(frontmatter_exit=required):
-                self.assertIn(required, frontmatter)
-            with self.subTest(body_exit=required):
-                self.assertIn(required, body)
-
-        for required in (
-            "开放范围描述",
-            "其他可能影响结果的重要问题",
-            "现有需求是否完整、合理",
-            "说明依据、影响和推荐调整",
-            "用户确认后才更新共同理解和改动范围",
-            "确认纳入的其他重要问题和需求调整",
-        ):
-            with self.subTest(required=required):
-                self.assertIn(required, clarify)
-
-        self.assertIn("主动识别遗漏和不合理需求", adapter)
+        self.assertFalse(REPO_ROOT.joinpath("skills", "grill-me", "rules").exists())
+        self.assertFalse(
+            REPO_ROOT.joinpath("skills", "grill-me", "templates").exists()
+        )
 
     def test_skill_template_keeps_implicit_invocation_boundaries(self) -> None:
         template = REPO_ROOT.joinpath(
             "skills", "build-skill", "templates", "skill.template.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("触发场景、排除条件及与相邻 Skill 的边界", template)
+        self.assertIn("做什么；何时使用；何时不使用；与相邻 Skill 的边界", template)
 
     def test_build_skill_requires_minimum_sufficient_design(self) -> None:
         quality = REPO_ROOT.joinpath(
@@ -627,7 +630,7 @@ class ValidateSkillTests(unittest.TestCase):
             "只保留目标、路由/退出、执行顺序和必要红线",
             "用户需求、仓库事实、平台契约、可复现缺陷或明确安全要求",
             "重复规范源",
-            "无法说明具体用途就删除",
+            "说不清用途就删除",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, reviewer)
@@ -639,18 +642,18 @@ class ValidateSkillTests(unittest.TestCase):
                 "examples/application.example.md",
                 "examples/monorepo.example.md",
             ),
-            ("build-plugin", "workflows/§03-design.md"): (
+            ("build-plugin", "workflows/§02-design.md"): (
                 "templates/claude-plugin.template.json",
                 "templates/codex-plugin.template.json",
                 "templates/plugin-design-proposal.template.md",
             ),
-            ("build-plugin", "workflows/§04-skill-delegation.md"): (
+            ("build-plugin", "workflows/§03-skill-delegation.md"): (
                 "rules/skill-architecture.md",
                 "rules/skill-frontmatter.md",
                 "rules/skill-quality-standard.md",
                 "templates/skill.template.md",
             ),
-            ("build-plugin", "workflows/§06-validation.md"): (
+            ("build-plugin", "workflows/§05-validation-delivery.md"): (
                 "checklists/plugin-design-review.md",
                 "checklists/plugin-semantic-acceptance.md",
             ),
@@ -658,10 +661,10 @@ class ValidateSkillTests(unittest.TestCase):
                 "templates/readme-preview.template.md",
             ),
             ("build-readme", "workflows/§03-authoring.md"): ("rules/github-style.md",),
-            ("build-readme", "workflows/§04-validation.md"): (
+            ("build-readme", "workflows/§04-validation-delivery.md"): (
                 "checklists/semantic-acceptance.md",
             ),
-            ("build-skill", "workflows/§03-design.md"): (
+            ("build-skill", "workflows/§02-design.md"): (
                 "examples/global-skill.example.md",
                 "examples/project-skill.example.md",
                 "templates/design-proposal.template.md",
@@ -719,15 +722,16 @@ class ValidateSkillTests(unittest.TestCase):
         research = root.joinpath("workflows", "§01-research.md").read_text(
             encoding="utf-8"
         )
-        clarification = root.joinpath("workflows", "§02-clarification.md").read_text(
+        clarification = root.joinpath("workflows", "§02-design.md").read_text(
             encoding="utf-8"
         )
         design_review = root.joinpath(
             "checklists", "plugin-design-review.md"
         ).read_text(encoding="utf-8")
+        entry = root.joinpath("SKILL.md").read_text(encoding="utf-8")
         for phrase in ("`pi.skills`", "Git/npm/本地安装", "`pi list`", "交互会话验证"):
             self.assertIn(phrase, research)
-        self.assertIn("Claude Code、Codex、ZCode、Pi", clarification)
+        self.assertIn("Claude Code、Codex、ZCode、Pi", entry + clarification)
         self.assertIn("Pi 的根 `package.json`", design_review)
 
     def test_build_agents_md_defines_nested_orchestration_contract(self) -> None:
@@ -736,11 +740,11 @@ class ValidateSkillTests(unittest.TestCase):
             path.read_text(encoding="utf-8")
             for path in (
                 skill_root / "SKILL.md",
-                skill_root / "workflows" / "§05-delivery.md",
+                skill_root / "workflows" / "§04-validation-delivery.md",
             )
         )
 
-        self.assertIn("由上层 Skill 统筹", contract)
+        self.assertIn("上层 Skill", contract)
         self.assertIn("不重复询问", contract)
         self.assertIn("确认依据", contract)
         self.assertIn("恢复条件", contract)
@@ -749,9 +753,9 @@ class ValidateSkillTests(unittest.TestCase):
         self,
     ) -> None:
         for name, workflow in (
-            ("build-agents-md", "§05-delivery.md"),
-            ("build-skill", "§06-delivery.md"),
-            ("build-plugin", "§07-delivery.md"),
+            ("build-agents-md", "§04-validation-delivery.md"),
+            ("build-skill", "§04-validation-delivery.md"),
+            ("build-plugin", "§05-validation-delivery.md"),
         ):
             with self.subTest(skill=name):
                 root = REPO_ROOT / "skills" / name
@@ -762,7 +766,7 @@ class ValidateSkillTests(unittest.TestCase):
                 self.assertIn("独立调用", contract)
                 self.assertIn("受控调用", contract)
                 self.assertIn("不重复询问", contract)
-                self.assertIn("由上层 Skill 统筹", contract)
+                self.assertIn("上层 Skill", contract)
                 self.assertIn("确认依据", contract)
                 self.assertIn("验证", contract)
                 self.assertIn("未验证", contract)

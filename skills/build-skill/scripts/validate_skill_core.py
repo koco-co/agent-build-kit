@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Dependency-free structural validator for Agent Skills.
 
-The validator supports portable, Claude Code, Codex, ZCode, Pi, and
+The validator supports portable, Claude Code, Codex, ZCode, Pi, DSH, and
 multi-platform source profiles. Relative symlinks are allowed only when their resolved targets
 remain inside the containing Plugin root.
 """
@@ -45,8 +45,7 @@ RECOMMENDED_HEADINGS = (
     "# Outcome",
     "## Routing",
     "## Steps",
-    "## Delivery",
-    "## Guardrails",
+    "## Rules",
     "## References",
 )
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -216,22 +215,41 @@ def validate_frontmatter(
     skill_md: Path,
     issues: list[Issue],
 ) -> None:
-    allowed = set(STANDARD_KEYS)
-    if profile in {"claude", "dual", "zcode", "pi"}:
-        # Pi loads disable-model-invocation and ignores other unknown source
-        # fields, so a shared multi-platform SKILL.md remains loadable.
-        allowed.update(CLAUDE_EXTENSION_KEYS)
+    # DSH tolerates unknown keys, so it does not reject source fields that
+    # belong to another platform. The canonical invocation keys still have to
+    # be spelled correctly, because DSH drops a Skill that uses legacy names.
+    if profile != "dsh":
+        allowed = set(STANDARD_KEYS)
+        if profile in {"claude", "dual", "zcode", "pi"}:
+            # Pi loads disable-model-invocation and ignores other unknown source
+            # fields, so a shared multi-platform SKILL.md remains loadable.
+            allowed.update(CLAUDE_EXTENSION_KEYS)
 
-    for key in data:
-        if key not in allowed:
-            add_issue(
-                issues,
-                "error",
-                "FRONTMATTER_KEY",
-                skill_md,
-                f"{profile} 配置不允许 Frontmatter 字段 {key!r}。",
-                skill_dir,
-            )
+        for key in data:
+            if key not in allowed:
+                add_issue(
+                    issues,
+                    "error",
+                    "FRONTMATTER_KEY",
+                    skill_md,
+                    f"{profile} 配置不允许 Frontmatter 字段 {key!r}。",
+                    skill_dir,
+                )
+    else:
+        for legacy, canonical in (
+            ("disableModelInvocation", "disable-model-invocation"),
+            ("modelInvocable", "disable-model-invocation"),
+            ("userInvocable", "user-invocable"),
+        ):
+            if legacy in data:
+                add_issue(
+                    issues,
+                    "error",
+                    "LEGACY_INVOCATION_KEY",
+                    skill_md,
+                    f"DSH 不支持 {legacy!r}，请改用 {canonical!r}；否则整个 Skill 会被丢弃。",
+                    skill_dir,
+                )
 
     name = data.get("name")
     if not isinstance(name, str) or not name.strip():
@@ -282,6 +300,15 @@ def validate_frontmatter(
             f"description 长度为 {len(description)}，超过 1024 字符。",
             skill_dir,
         )
+    elif profile == "dsh" and len(description) > 500:
+        add_issue(
+            issues,
+            "warning",
+            "DESCRIPTION_DSH_LENGTH",
+            skill_md,
+            f"description 长度为 {len(description)}，超过 DSH 目录的 500 字符展示上限；触发条件可能被截断。",
+            skill_dir,
+        )
 
     if "compatibility" in data:
         compatibility = data.get("compatibility")
@@ -314,7 +341,7 @@ def validate_frontmatter(
                     skill_dir,
                 )
 
-    if profile in {"claude", "dual", "zcode", "pi"}:
+    if profile in {"claude", "dual", "zcode", "pi", "dsh"}:
         manual = data.get("disable-model-invocation")
         if manual is not None and str(manual).lower() not in {"true", "false"}:
             add_issue(
@@ -330,10 +357,11 @@ def validate_frontmatter(
 def validate_headings(
     text: str, skill_dir: Path, skill_md: Path, issues: list[Issue]
 ) -> None:
-    """Treat the six-key skeleton as a recommendation, not a contract.
+    """Treat the five-key skeleton as a recommendation, not a contract.
 
     The keys are a default skeleton authors may trim, rename, or restructure;
-    omission rules live in rules/architecture.md. Duplicated top-level keys
+    omission rules live in the target skill's architecture rules when present.
+    Duplicated top-level keys
     still warn (they almost always indicate confusion), and deviation from
     the default skeleton is reported as informational guidance that never
     fails strict validation.
@@ -374,8 +402,8 @@ def validate_headings(
             "HEADING_SKELETON",
             skill_md,
             f"未采用默认推荐章节结构（{detail}）；"
-            "Outcome/Routing/Steps/Delivery/Guardrails/References 为建议而非必需，"
-            "确认结构满足内容需要即可，省略准则见 rules/architecture.md。",
+            "Outcome/Routing/Steps/Rules/References 为建议而非必需，"
+            "确认结构满足内容需要即可；省略准则见该 Skill 的架构规则（若存在）。",
             skill_dir,
         )
 
@@ -842,7 +870,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("skill_dir", type=Path, help="包含 SKILL.md 的 Skill 目录")
     parser.add_argument(
         "--profile",
-        choices=("portable", "claude", "codex", "zcode", "pi", "dual"),
+        choices=("portable", "claude", "codex", "zcode", "pi", "dsh", "dual"),
         default="portable",
         help="选择目标平台，并按该平台规则检查 Frontmatter 和适配配置",
     )

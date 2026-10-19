@@ -1,6 +1,6 @@
 # Agent Build Kit
 
-用于澄清想法、构建与审查 Agent Skill 和 Plugin，以及维护项目开发文档的多平台工具集。
+用于压力测试计划、决策或想法，构建与审查 Agent Skill 和 Plugin，以及维护项目开发文档的多平台工具集。
 
 [![Claude Code](https://img.shields.io/badge/Claude_Code-Plugin-D97757?logo=anthropic&logoColor=white)](https://code.claude.com/docs/en/plugins)
 [![Codex](https://img.shields.io/badge/Codex-Plugin-000000?logo=openai&logoColor=white)](https://developers.openai.com/plugins/)
@@ -11,11 +11,11 @@
 
 ## 功能
 
-Agent Build Kit 直接适配 Claude Code、Codex、ZCode 和 Pi。`skills/` 是各项能力的规范源；完整仓库可作为 Plugin 或 Package 安装，不依赖其他 Skill 的能力也可以单独安装。
+Agent Build Kit 直接适配 Claude Code、Codex、ZCode 和 Pi；同一份 Skill 也可以安装到 DeepSeek Harness（DSH）。`skills/` 是各项能力的规范源；完整仓库可作为 Plugin 或 Package 安装，不依赖其他 Skill 的能力也可以单独安装。
 
 | Skill | 用途 |
 | --- | --- |
-| [`clarify-idea`](skills/clarify-idea/) | 通过事实核查和逐轮决策，将模糊想法整理为明确的目标、范围与方案 |
+| [`grill-me`](skills/grill-me/) | 围绕设计树逐轮追问计划、决策或想法，直到所有分支都有明确结论 |
 | [`rename-codex-sessions`](skills/rename-codex-sessions/) | 按创建日期和实际内容整理 Codex 本地项目主对话标题，确认后只修改 session 名称 |
 | [`audit-agent-setup`](skills/audit-agent-setup/) | 检查 Agent Skill、Plugin、README 和项目指令，确认后修复并复检 |
 | [`build-skill`](skills/build-skill/) | 构建或审查符合多平台约定的 Agent Skill |
@@ -37,7 +37,7 @@ claude plugin marketplace list
 claude plugin install agent-build-kit@agent-build-kit --scope user
 ```
 
-完整安装后，可以使用 `/agent-build-kit:clarify-idea` 等命令调用 Skill。
+完整安装后，可以使用 `/agent-build-kit:grill-me` 等命令调用 Skill。
 
 ### Codex
 
@@ -47,7 +47,7 @@ codex plugin marketplace list
 codex plugin add agent-build-kit@agent-build-kit
 ```
 
-完整安装后，可以使用 `$agent-build-kit:clarify-idea` 等命令调用 Skill。
+完整安装后，可以使用 `$agent-build-kit:grill-me` 等命令调用 Skill。
 
 ### ZCode
 
@@ -60,7 +60,7 @@ pi install git:github.com/koco-co/agent-build-kit
 pi list
 ```
 
-完整安装后，可以使用 `/skill:clarify-idea` 等命令调用 Skill。
+完整安装后，可以使用 `/skill:grill-me` 等命令调用 Skill。
 
 ### 四端同步与发布
 
@@ -92,9 +92,9 @@ python3 scripts/install_skill.py build-skill \
   --dry-run
 ```
 
-移除 `--dry-run` 后执行安装。`--platform` 支持 `claude`、`codex`、`zcode` 和 `pi`；`--scope` 支持 `user` 和 `project`。将 `build-skill` 替换为以下名称可安装其他独立 Skill：
+移除 `--dry-run` 后执行安装。`--platform` 支持 `claude`、`codex`、`zcode`、`pi` 和 `dsh`；`--scope` 支持 `user` 和 `project`。DSH 用户级目录是 `$DSH_HOME/skills`（未设置 `$DSH_HOME` 时为 `~/.dsh/skills`），项目级目录是 `.dsh/skills`；DSH 会热加载新增或更新的 Skill。将 `build-skill` 替换为以下名称可安装其他独立 Skill：
 
-- `clarify-idea`
+- `grill-me`
 - `rename-codex-sessions`
 - `build-plugin`
 - `build-readme`
@@ -103,6 +103,20 @@ python3 scripts/install_skill.py build-skill \
 - `handoff`
 
 目标目录已存在时默认拒绝覆盖；明确需要覆盖时添加 `--force`。
+
+## 4.1.0 迁移
+
+4.1.0 补齐 DeepSeek Harness 的安装、校验和平台说明，并统一 8 个 Skill 的入口结构与文案。没有 Skill 改名；升级后按上方命令更新完整分发包或独立安装副本，再在目标客户端重新验证触发与显式调用。
+
+## 4.0.0 迁移
+
+4.0.0 用 `grill-me` 替换 `clarify-idea`，不提供旧名称别名。升级完整分发包或独立 Skill 后，请把调用命令、脚本和本地引用中的 `clarify-idea` 改为 `grill-me`。
+
+| 3.x 名称 | 4.0.0 名称 |
+| --- | --- |
+| `clarify-idea` | `grill-me` |
+
+`grill-me` 按设计树逐轮追问；原先 `clarify-idea` 的 UI 交互契约预览不再适用，需要确认界面流程时应单独提出。
 
 ## 3.0.0 迁移
 
@@ -155,11 +169,11 @@ python3 skills/build-plugin/scripts/validate_plugin.py \
   --strict
 ```
 
-验证单个 Skill：
+验证单个 Skill（DSH 用 `--profile dsh`）：
 
 ```bash
 python3 skills/build-skill/scripts/validate_skill.py \
-  skills/clarify-idea \
+  skills/grill-me \
   --profile dual \
   --plugin-root . \
   --strict
@@ -177,7 +191,7 @@ python3 scripts/validate_skill_evals.py .
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 ```
 
-静态校验和安装成功不能代替真实客户端行为验证。发布前仍需分别在 Claude Code、Codex、ZCode 和 Pi 中验证发现、调用与更新流程。
+静态校验和安装成功不能代替真实客户端行为验证。发布前仍需分别在 Claude Code、Codex、ZCode、Pi 和 DSH 中验证发现、调用与更新流程。
 
 ## 开发约定
 

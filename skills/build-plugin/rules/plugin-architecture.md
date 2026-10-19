@@ -26,7 +26,9 @@ Plugin 负责组织可安装、可升级的能力包。它可以包含 Skills、
 │   ├── marketplace.json # 按需；ZCode 也读取该文件
 │   └── plugin.json
 ├── .codex-plugin/plugin.json
+├── .agents/plugins/marketplace.json # Codex Marketplace，按需
 ├── .zcode-plugin/plugin.json # 目标含 ZCode 时按需
+├── package.json # Pi Package 的 Manifest，目标含 Pi 时按需
 ├── skills/
 ├── agents/          # 按需
 ├── hooks/           # 按需

@@ -1,6 +1,6 @@
 {
   "name": "agent-build-kit",
-  "version": "3.3.0",
+  "version": "4.1.0",
   "description": "Clarify ideas and build, audit, and maintain Agent Skills, plugins, README, project instructions, and developer documentation.",
   "author": {
     "name": "koco-co",
@@ -32,7 +32,7 @@
     ],
     "websiteURL": "https://github.com/koco-co/agent-build-kit",
     "defaultPrompt": [
-      "Use clarify-idea to clarify a rough idea before implementation.",
+      "Use grill-me to stress-test a plan, decision, or idea before implementation.",
       "Use audit-agent-setup to review Agent Skills, plugins, README, and project instructions, then repair verified issues after confirmation.",
       "Use the matching Agent Build Kit Skill to build or maintain Agent Skills, plugins, README, project instructions, or developer documentation."
     ],

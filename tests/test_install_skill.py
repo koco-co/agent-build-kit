@@ -29,6 +29,7 @@ class InstallSkillTests(unittest.TestCase):
     ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env["HOME"] = str(home)
+        env.pop("DSH_HOME", None)
         return subprocess.run(
             [
                 sys.executable,
@@ -252,6 +253,7 @@ class InstallSkillTests(unittest.TestCase):
             ("codex", ".agents"),
             ("zcode", ".zcode"),
             ("pi", ".pi/agent"),
+            ("dsh", ".dsh"),
         ):
             with self.subTest(platform=platform), tempfile.TemporaryDirectory() as temp:
                 home = Path(temp)
@@ -278,6 +280,7 @@ class InstallSkillTests(unittest.TestCase):
             ("codex", ".agents"),
             ("zcode", ".zcode"),
             ("pi", ".pi/agent"),
+            ("dsh", ".dsh"),
         ):
             with self.subTest(platform=platform), tempfile.TemporaryDirectory() as temp:
                 home = Path(temp)
@@ -305,7 +308,7 @@ class InstallSkillTests(unittest.TestCase):
         skill_names = sorted(
             path.name
             for path in REPO_ROOT.joinpath("skills").iterdir()
-            if path.name not in {"audit-agent-setup"}
+            if path.is_dir() and path.name not in {"audit-agent-setup"}
         )
 
         for skill_name in skill_names:
@@ -314,6 +317,7 @@ class InstallSkillTests(unittest.TestCase):
                 ("codex", ".agents"),
                 ("zcode", ".zcode"),
                 ("pi", ".pi/agent"),
+                ("dsh", ".dsh"),
             ):
                 with (
                     self.subTest(skill=skill_name, platform=platform),
@@ -369,7 +373,7 @@ class InstallSkillTests(unittest.TestCase):
 
     def test_full_package_only_skills_reject_standalone_installation(self) -> None:
         for skill_name in ("audit-agent-setup",):
-            for platform in ("claude", "codex", "zcode", "pi"):
+            for platform in ("claude", "codex", "zcode", "pi", "dsh"):
                 with (
                     self.subTest(skill=skill_name, platform=platform),
                     tempfile.TemporaryDirectory() as temp,
@@ -381,11 +385,60 @@ class InstallSkillTests(unittest.TestCase):
                         result.stderr,
                     )
 
-    def test_dsh_is_not_a_standalone_installation_platform(self) -> None:
+    def test_dsh_install_preserves_frontmatter_and_removes_agents(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
-            result = self.run_installer(Path(temp), "dsh")
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("invalid choice: 'dsh'", result.stderr)
+            home = Path(temp)
+            result = self.run_installer(home, "dsh", "handoff")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+            destination = home / ".dsh" / "skills" / "handoff"
+            skill_md = destination.joinpath("SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("argument-hint:", skill_md)
+            self.assertFalse(destination.joinpath("agents").exists())
+
+    def test_dsh_project_install_uses_project_skill_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            destination = install_skill(
+                repo_root=REPO_ROOT,
+                skill_name="build-skill",
+                platform="dsh",
+                scope="project",
+                project_dir=project,
+            )
+            self.assertEqual(
+                destination,
+                project.resolve() / ".dsh" / "skills" / "build-skill",
+            )
+            self.assertTrue(destination.joinpath("SKILL.md").is_file())
+
+    def test_dsh_user_install_honors_dsh_home(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp)
+            dsh_home = home / "custom-dsh"
+            env = os.environ.copy()
+            env["HOME"] = str(home)
+            env["DSH_HOME"] = str(dsh_home)
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(INSTALLER),
+                    "handoff",
+                    "--platform",
+                    "dsh",
+                    "--scope",
+                    "user",
+                ],
+                cwd=REPO_ROOT,
+                env=env,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue(
+                dsh_home.joinpath("skills", "handoff", "SKILL.md").is_file()
+            )
 
     def test_pi_project_install_uses_project_skill_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temp:

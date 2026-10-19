@@ -20,7 +20,7 @@ from typing import Any, Callable, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLUGIN_ID = "agent-build-kit@agent-build-kit"
 PLUGIN_NAME = "agent-build-kit"
-CLARIFY_SKILL = Path("skills/clarify-idea/SKILL.md")
+GRILL_SKILL = Path("skills/grill-me/SKILL.md")
 VERSION_FILES = (
     Path(".claude-plugin/plugin.json"),
     Path(".claude-plugin/marketplace.json"),
@@ -255,8 +255,8 @@ def _find_entry(entries: Any, plugin_id: str, label: str) -> dict[str, Any]:
 
 
 def _verify_skill_path(path: Path, label: str) -> None:
-    if not (path / CLARIFY_SKILL).is_file():
-        raise SyncError(f"{label}缺少 {CLARIFY_SKILL}")
+    if not (path / GRILL_SKILL).is_file():
+        raise SyncError(f"{label}缺少 {GRILL_SKILL}")
 
 
 def sync_claude(

@@ -52,7 +52,7 @@ class BuildDevDocsContractTests(unittest.TestCase):
         plan = self.read("workflows/§02-plan.md")
         authoring = self.read("workflows/§03-authoring.md")
         combined = entry + plan + authoring
-        self.assertIn("`AGENT_BRIEF.md`、`CHANGELOG.md`", combined)
+        self.assertIn("`AGENT_BRIEF.md` 与 `CHANGELOG.md`", combined)
         self.assertIn("仅在多份文档需要导航", combined)
         self.assertIn("项目已有该机制", combined)
         self.assertIn("可选 AGENTS.md 入口", combined)

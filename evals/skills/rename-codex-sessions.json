@@ -26,7 +26,7 @@
       "kind": "behavior",
       "prompt": "批量整理 Codex 会话标题；有些对话主题无法判断，不能猜标题。",
       "expected": [
-        "日期只取 createdAt 并按 Asia/Shanghai 转换",
+        "日期只取 createdAt 并按系统本地时区转换，需要固定时区时用 --timezone",
         "主题不明确时原名和新名相同",
         "no_rollout 和 unknown 线程不进入改名映射",
         "表格确认前不执行写入"
@@ -40,7 +40,7 @@
         "重新核对线程仍属于本地项目主对话",
         "重新核对 renameStatus，已不可执行的线程跳过",
         "只对可执行线程发送 thread/name/set",
-        "changed、skipped、failed 分开报告，failed 时不回滚已成功修改",
+        "changed、unchanged、skipped、failed 分开报告，failed 时不回滚已成功修改",
         "不修改项目归属、排序、置顶或归档状态"
       ]
     },

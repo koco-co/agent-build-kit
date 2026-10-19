@@ -48,7 +48,7 @@ api-contract-review/
     └── semantic-review.md
 ```
 
-包含六个章节的结构只是默认建议，并非必须采用：本示例因有独立分支和红线，使用完整的 `Outcome / Routing / Steps / Delivery / Guardrails / References`；无附属文件的 Skill 应删除 `References` 整节，无红线时删除 `Guardrails`，均属合法形态。
+章节按内容需要保留：本示例因有独立分支和红线，使用 `Outcome / Routing / Steps / Rules / References`；没有独立分支时删除 `Routing`，没有红线时删除 `Rules`，没有附属文件时删除 `References`，都属合法形态。
 
 ## 设计理由
 

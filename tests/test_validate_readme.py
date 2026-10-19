@@ -93,6 +93,12 @@ class ValidateReadmeTests(unittest.TestCase):
             VALID_README + "\n<details><summary>More</summary>\n", "HTML_TAG_MISMATCH"
         )
 
+    def test_gfm_autolinks_are_not_misread_as_html(self) -> None:
+        text = VALID_README + "\nContact <user@example.com> or <https://example.com>.\n"
+        with tempfile.TemporaryDirectory() as temp:
+            result = self.run_validator(self.write_readme(Path(temp), text))
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_existing_local_reference_passes_and_missing_reference_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
@@ -141,6 +147,10 @@ class ValidateReadmeTests(unittest.TestCase):
             ("<svg><broken>", "SVG_INVALID"),
             (
                 '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+                "SVG_UNSAFE",
+            ),
+            (
+                '<svg xmlns="http://www.w3.org/2000/svg"><style>@import url(https://evil.example/x.css);</style></svg>',
                 "SVG_UNSAFE",
             ),
         ):

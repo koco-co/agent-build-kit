@@ -1,0 +1,35 @@
+{
+  "skill": "grill-me",
+  "cases": [
+    {
+      "id": "trigger-grill-plan",
+      "kind": "should_trigger",
+      "prompt": "Grill me on this plan for a local-first note-taking app before I start building.",
+      "expected": ["建立 design tree", "按轮次提出当前 frontier 的全部问题", "每个问题编号并给出推荐答案"]
+    },
+    {
+      "id": "trigger-stress-test-decision",
+      "kind": "should_trigger",
+      "prompt": "帮我往死里拷问这个技术选型，我担心还有没想清楚的假设。",
+      "expected": ["持续追问直到形成共同理解", "等待回答后再计算下一轮 frontier"]
+    },
+    {
+      "id": "exclude-direct-implementation",
+      "kind": "should_not_trigger",
+      "prompt": "按已确认的方案把 config.py 的默认超时改成 30 秒。",
+      "expected": ["目标明确且无需压力测试", "退出并交给实施流程"]
+    },
+    {
+      "id": "behavior-frontier-rounds",
+      "kind": "behavior",
+      "prompt": "我还没想清楚这个功能的范围，先别改代码，帮我把关键决策问清楚。",
+      "expected": ["先问当前 frontier", "依赖未决问题的问题留到后续轮次", "确认前不改项目内容"]
+    },
+    {
+      "id": "behavior-facts-via-subagent",
+      "kind": "behavior",
+      "prompt": "这个决定需要先看仓库现状，但也有些产品取舍要问我。",
+      "expected": ["派 sub-agent 查环境事实", "不阻塞其他 frontier 问题", "不向用户询问可自行查明的事实"]
+    }
+  ]
+}

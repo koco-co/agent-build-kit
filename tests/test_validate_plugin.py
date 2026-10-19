@@ -121,7 +121,7 @@ class ValidatePluginTests(unittest.TestCase):
         self.assertIn("skills/build-agents-md", result.stdout)
         self.assertIn("skills/build-dev-docs", result.stdout)
         self.assertIn("skills/audit-agent-setup", result.stdout)
-        self.assertIn("skills/clarify-idea", result.stdout)
+        self.assertIn("skills/grill-me", result.stdout)
         self.assertIn("skills/handoff", result.stdout)
 
     def test_build_plugin_templates_and_rules_are_standalone_safe(self) -> None:
@@ -162,7 +162,7 @@ class ValidatePluginTests(unittest.TestCase):
             with self.subTest(prohibited=prohibited):
                 self.assertNotIn(prohibited, quality)
 
-        implementation = (skill / "workflows" / "§05-implementation.md").read_text(
+        implementation = (skill / "workflows" / "§04-implementation.md").read_text(
             encoding="utf-8"
         )
         self.assertIn(
@@ -174,7 +174,7 @@ class ValidatePluginTests(unittest.TestCase):
         )
         self.assertNotIn("python3 skills/build-plugin/", implementation)
 
-        design = (skill / "workflows" / "§03-design.md").read_text(encoding="utf-8")
+        design = (skill / "workflows" / "§02-design.md").read_text(encoding="utf-8")
         self.assertNotIn("examples/dual-platform-plugin.example.md", design)
 
     def test_repository_shared_runtime_files_are_regular_mirrors(self) -> None:
@@ -565,7 +565,7 @@ class ValidatePluginTests(unittest.TestCase):
         contracts = {
             "build-skill": (
                 REPO_ROOT / "skills" / "build-skill" / "SKILL.md",
-                REPO_ROOT / "skills" / "build-skill" / "workflows" / "§06-delivery.md",
+                REPO_ROOT / "skills" / "build-skill" / "workflows" / "§04-validation-delivery.md",
                 REPO_ROOT
                 / "skills"
                 / "build-skill"
@@ -574,7 +574,7 @@ class ValidatePluginTests(unittest.TestCase):
             ),
             "build-plugin": (
                 REPO_ROOT / "skills" / "build-plugin" / "SKILL.md",
-                REPO_ROOT / "skills" / "build-plugin" / "workflows" / "§07-delivery.md",
+                REPO_ROOT / "skills" / "build-plugin" / "workflows" / "§05-validation-delivery.md",
                 REPO_ROOT
                 / "skills"
                 / "build-plugin"
@@ -587,14 +587,14 @@ class ValidatePluginTests(unittest.TestCase):
             with self.subTest(skill=name):
                 contract = "\n".join(path.read_text(encoding="utf-8") for path in paths)
                 self.assertIn("主动询问", contract)
-                self.assertIn("只授权其中部分动作", contract)
-                self.assertIn("不得在用户回答前执行", contract)
+                self.assertIn("可以全部或部分授权", contract)
+                self.assertIn("用户回答前不执行", contract)
                 self.assertIn("实现和验证已经完成。是否执行以下交付动作？", contract)
                 self.assertIn("只列出真实适用的动作", contract)
                 self.assertIn("独立调用", contract)
                 self.assertIn("受控调用", contract)
                 self.assertIn("不重复询问", contract)
-                self.assertIn("上层总控", contract)
+                self.assertIn("上层 Skill", contract)
                 self.assertIn("恢复条件", contract)
 
     def test_repository_release_versions_are_synchronized(self) -> None:
@@ -625,7 +625,7 @@ class ValidatePluginTests(unittest.TestCase):
 
         versions = {manifest["version"] for manifest in manifests}
         versions.update((marketplace_plugin["version"], package["version"]))
-        self.assertEqual(versions, {"3.3.0"})
+        self.assertEqual(versions, {"4.1.0"})
 
         identities = [*manifests, marketplace_plugin, package]
         self.assertEqual({item["name"] for item in identities}, {"agent-build-kit"})

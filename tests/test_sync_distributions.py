@@ -40,14 +40,14 @@ class RecordingRunner:
 
 class SyncDistributionsTests(unittest.TestCase):
     def test_read_version_includes_nested_marketplace_version(self) -> None:
-        self.assertEqual(sync_distributions.read_version(REPO_ROOT), "3.3.0")
+        self.assertEqual(sync_distributions.read_version(REPO_ROOT), "4.1.0")
 
     def test_preflight_runs_each_release_gate_once(self) -> None:
         runner = RecordingRunner()
 
         version = sync_distributions.run_preflight(REPO_ROOT, runner)
 
-        self.assertEqual(version, "3.3.0")
+        self.assertEqual(version, "4.1.0")
         commands = [" ".join(call) for call in runner.calls]
         self.assertTrue(any("sync_shared_files.py --root" in call for call in commands))
         self.assertTrue(any("validate_plugin.py" in call and "--strict" in call for call in commands))
@@ -70,7 +70,7 @@ class SyncDistributionsTests(unittest.TestCase):
 
     def test_client_sync_order_is_fixed(self) -> None:
         with (
-            patch.object(sync_distributions, "run_preflight", return_value="3.3.0"),
+            patch.object(sync_distributions, "run_preflight", return_value="4.1.0"),
             patch.object(sync_distributions, "commit_and_push"),
             patch.object(sync_distributions, "sync_clients") as sync_clients,
         ):
@@ -79,7 +79,7 @@ class SyncDistributionsTests(unittest.TestCase):
             )
 
         self.assertEqual(result, 0)
-        sync_clients.assert_called_once_with(REPO_ROOT, "3.3.0")
+        sync_clients.assert_called_once_with(REPO_ROOT, "4.1.0")
 
     def test_zcode_workspace_uses_the_repository_identity(self) -> None:
         workspace = sync_distributions._zcode_workspace(REPO_ROOT)
@@ -95,13 +95,13 @@ class SyncDistributionsTests(unittest.TestCase):
         entry = sync_distributions._find_entry(
             {
                 "installed": [
-                    {"pluginId": "agent-build-kit@agent-build-kit", "version": "3.3.0"}
+                    {"pluginId": "agent-build-kit@agent-build-kit", "version": "4.1.0"}
                 ]
             },
             "agent-build-kit@agent-build-kit",
             "Codex",
         )
-        self.assertEqual(entry["version"], "3.3.0")
+        self.assertEqual(entry["version"], "4.1.0")
 
     def test_stage_requires_publish(self) -> None:
         self.assertEqual(sync_distributions.main(["--stage"]), 2)
