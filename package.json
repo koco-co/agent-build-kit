@@ -1,6 +1,6 @@
 {
   "name": "agent-build-kit",
-  "version": "4.1.0",
+  "version": "4.1.1",
   "description": "Clarify ideas and build, audit, and maintain Agent Skills, plugins, README, project instructions, and developer documentation.",
   "private": true,
   "keywords": [

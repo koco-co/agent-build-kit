@@ -104,33 +104,6 @@ python3 scripts/install_skill.py build-skill \
 
 目标目录已存在时默认拒绝覆盖；明确需要覆盖时添加 `--force`。
 
-## 4.1.0 迁移
-
-4.1.0 补齐 DeepSeek Harness 的安装、校验和平台说明，并统一 8 个 Skill 的入口结构与文案。没有 Skill 改名；升级后按上方命令更新完整分发包或独立安装副本，再在目标客户端重新验证触发与显式调用。
-
-## 4.0.0 迁移
-
-4.0.0 用 `grill-me` 替换 `clarify-idea`，不提供旧名称别名。升级完整分发包或独立 Skill 后，请把调用命令、脚本和本地引用中的 `clarify-idea` 改为 `grill-me`。
-
-| 3.x 名称 | 4.0.0 名称 |
-| --- | --- |
-| `clarify-idea` | `grill-me` |
-
-`grill-me` 按设计树逐轮追问；原先 `clarify-idea` 的 UI 交互契约预览不再适用，需要确认界面流程时应单独提出。
-
-## 3.0.0 迁移
-
-3.0.0 是破坏性版本，不提供旧名称的运行时别名。升级完整分发包或独立 Skill 后，请同步更新调用命令、脚本和本地引用。
-
-| 2.x 名称 | 3.0.0 名称 |
-| --- | --- |
-| `build-goals` | `agent-build-kit` |
-| `shape-idea` | `clarify-idea` |
-| `health-check` | `audit-agent-setup` |
-| `build-docs` | `build-dev-docs` |
-
-3.0.0 将仓库地址和完整分发包标识从 `koco-co/build-goals` 改为 `koco-co/agent-build-kit`；发布前需先在 GitHub 完成仓库重命名。本地旧版本不会自动改名；请卸载旧分发包并按上方命令安装 3.0.0。
-
 ## 仓库结构
 
 ```text
