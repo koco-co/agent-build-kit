@@ -625,7 +625,7 @@ class ValidatePluginTests(unittest.TestCase):
 
         versions = {manifest["version"] for manifest in manifests}
         versions.update((marketplace_plugin["version"], package["version"]))
-        self.assertEqual(versions, {"4.1.1"})
+        self.assertEqual(versions, {"4.1.2"})
 
         identities = [*manifests, marketplace_plugin, package]
         self.assertEqual({item["name"] for item in identities}, {"agent-build-kit"})

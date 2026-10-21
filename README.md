@@ -176,3 +176,5 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 ## 许可证
 
 本项目使用 [MIT License](LICENSE)。
+
+`grill-me` 与 `handoff` 改编自 [mattpocock/skills](https://github.com/mattpocock/skills)（MIT License，Copyright (c) 2026 Matt Pocock）；原版权与许可声明随 [`skills/grill-me/LICENSE.txt`](skills/grill-me/LICENSE.txt) 和 [`skills/handoff/LICENSE.txt`](skills/handoff/LICENSE.txt) 分发。

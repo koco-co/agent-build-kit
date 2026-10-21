@@ -41,14 +41,14 @@ class RecordingRunner:
 
 class SyncDistributionsTests(unittest.TestCase):
     def test_read_version_includes_nested_marketplace_version(self) -> None:
-        self.assertEqual(sync_distributions.read_version(REPO_ROOT), "4.1.1")
+        self.assertEqual(sync_distributions.read_version(REPO_ROOT), "4.1.2")
 
     def test_preflight_runs_each_release_gate_once(self) -> None:
         runner = RecordingRunner()
 
         version = sync_distributions.run_preflight(REPO_ROOT, runner)
 
-        self.assertEqual(version, "4.1.1")
+        self.assertEqual(version, "4.1.2")
         commands = [" ".join(call) for call in runner.calls]
         self.assertTrue(any("sync_shared_files.py --root" in call for call in commands))
         self.assertTrue(any("validate_plugin.py" in call and "--strict" in call for call in commands))
